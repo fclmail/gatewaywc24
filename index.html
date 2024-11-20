@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay with MetaMask (Polygon USDC)</title>
+  <style>
+    body {
+      background-color: #1e2a47;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      color: #f39c12;
+    }
+    .pay-button {
+      background-color: #f39c12;
+      padding: 15px 40px;
+      font-size: 1.2em;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .pay-button:hover {
+      background-color: #e67e22;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Pay with MetaMask (Polygon USDC)</h1>
+  
+  <p>Choose an amount to pay via Polygon USDC (ERC20)</p>
+  
+  <!-- Dropdown menu to select payment -->
+  <select id="paymentAmount">
+    <option value="0.01">0.01 USDC</option>
+    <option value="200">200 USDC</option>
+    <option value="1000">1000 USDC</option>
+  </select>
+
+  <br><br>
+  
+  <!-- Pay with MetaMask button -->
+  <button class="pay-button" id="payButton">Pay Now with MetaMask</button>
+
+  <div id="status" class="info"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.5.2/web3.min.js"></script>
+  
+  <script>
+    // Check if MetaMask is installed (either browser extension or mobile app)
+    if (typeof window.ethereum !== 'undefined') {
+      console.log("MetaMask is installed");
+
+      // Initialize Web3 using the MetaMask provider
+      const web3 = new Web3(window.ethereum);
+
+      // USDC token contract address on Polygon network (ERC20)
+      const usdcAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Polygon USDC contract
+      const decimals = 6; // USDC has 6 decimals
+
+      // Set up the button to trigger the payment
+      document.getElementById("payButton").onclick = async function() {
+        const paymentAmount = document.getElementById("paymentAmount").value;
+        
+        // Request user account access (for both mobile and desktop)
+        try {
+          // Request accounts from MetaMask
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+          // Get user accounts
+          const accounts = await web3.eth.getAccounts();
+          const senderAddress = accounts[0];
+          console.log("Sender Address:", senderAddress);
+
+          // Set the recipient's address (for example, a contract or wallet address)
+          const recipientAddress = '0x2Ee934331C771F0f5901314226375F469e7CeceC';  // Replace with your MetaMask address
+
+          // Prepare the transaction parameters (using Polygon USDC token as an example)
+          const amountInTokens = web3.utils.toBN(paymentAmount * Math.pow(10, decimals)); // Convert to USDC decimals
+
+          // Set up the ABI for the ERC20 token transfer
+          const usdcABI = [
+            {
+              "constant": false,
+              "inputs": [
+                {
+                  "name": "_to",
+                  "type": "address"
+                },
+                {
+                  "name": "_value",
+                  "type": "uint256"
+                }
+              ],
+              "name": "transfer",
+              "outputs": [
+                {
+                  "name": "",
+                  "type": "bool"
+                }
+              ],
+              "payable": false,
+              "stateMutability": "nonpayable",
+              "type": "function"
+            }
+          ];
+
+          // Create contract instance for USDC
+          const usdcContract = new web3.eth.Contract(usdcABI, usdcAddress);
+
+          // Send the transaction
+          const txHash = await usdcContract.methods.transfer(recipientAddress, amountInTokens).send({
+            from: senderAddress,
+            gas: 200000,
+            gasPrice: '0x5d21dba00' // Gas price in Wei (adjust as needed)
+          });
+
+          // Show the transaction status
+          document.getElementById("status").innerHTML = `Transaction successful! <br> Tx Hash: ${txHash.transactionHash}`;
+        } catch (error) {
+          console.error(error);
+          document.getElementById("status").innerHTML = `Transaction failed: ${error.message}`;
+        }
+      };
+    } else {
+      document.getElementById("status").innerHTML = "Please install MetaMask to proceed with the payment.";
+    }
+  </script>
+</body>
+</html>
